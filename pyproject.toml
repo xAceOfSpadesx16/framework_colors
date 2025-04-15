@@ -1,0 +1,16 @@
+# Build Settings
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "framework_colors"
+version = "2025.04.15"
+description = "Framework color selections."
+readme = "README.md"
+requires-python = ">=3.12"
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Programming Language :: Python",
+  "Framework :: Django",
+]
