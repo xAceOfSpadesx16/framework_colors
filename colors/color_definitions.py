@@ -15,8 +15,21 @@ class ColorChoices(TextChoices):
     TEAL = 'teal', 'Teal'
     CYAN = 'cyan', 'Cyan'
     GRAY = 'gray', 'Gray'
-        
 
+    @property
+    def bg_css_class(self):
+        return ''
+
+    @property
+    def text_css_class(self):
+        return ''
+
+    @classmethod
+    def choices_list(cls):
+        options = [(member.value, member.label, member.bg_css_class, member.text_css_class) for member in cls]
+        return options
+    
+class BootstrapColorChoices(ColorChoices):
     @property
     def bg_css_class(self):
         bg_classes = {
@@ -51,7 +64,3 @@ class ColorChoices(TextChoices):
         }
         return text_classes.get(self.value, '')
 
-    @classmethod
-    def choices_list(cls):
-        options = [(member.value, member.label, member.bg_css_class, member.text_css_class) for member in cls]
-        return options
