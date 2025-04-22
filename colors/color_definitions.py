@@ -1,87 +1,77 @@
-from django.db.models import TextChoices
+from __future__ import annotations
+from typing import TYPE_CHECKING
+from dataclasses import dataclass, field
+from django.utils.translation import gettext_lazy as _
+from typing import Optional, Dict, List, Tuple
+
+if TYPE_CHECKING:
+    from .field_type import FieldType
 
 
-class ColorChoices(TextChoices):
-    BLUE = "blue", "Blue"
-    GREEN = "green", "Green"
-    YELLOW = "yellow", "Yellow"
-    RED = "red", "Red"
-    PURPLE = "purple", "Purple"
-    INDIGO = "indigo", "Indigo"
-    PINK = "pink", "Pink"
-    ORANGE = "orange", "Orange"
-    TEAL = "teal", "Teal"
-    CYAN = "cyan", "Cyan"
-    GRAY = "gray", "Gray"
+@dataclass(frozen=True, slots=True)
+class ColorOption:
+    value: str = field(default_factory=str)
+    label: str = field(default_factory=str)
+    background_css: str = field(default_factory=str)
+    text_css: str = field(default_factory=str)
+    
+    @property
+    def instance_choices(self):
+        return (self.value, self.label)
 
     @property
-    def background_css(self):
-        return ""
+    def extended_choices(self):
+        return (self.value, self.label, self.background_css, self.text_css)
+    
+    def get_by_type(self, field_type: FieldType):
+        return getattr(self, field_type.value)
+
+
+@dataclass(frozen=True, slots=True)
+class ColorChoices:
+    _value_map: Dict[str, ColorOption] = field(init=False, default_factory=dict)
+
+    def __post_init__(self):
+        for color in self.__slots__:
+            option = getattr(self, color)
+            if isinstance(option, ColorOption):
+                self.get_options_dict[option.value] = option
 
     @property
-    def text_css(self):
-        return ""
+    def get_options_dict(self):
+        return self._value_map
 
-    @classmethod
-    def choices_list(cls):
-        options = [
-            (member.value, member.label, member.background_css, member.text_css)
-            for member in cls
-        ]
-        return options
+    def get_by_value(self, value: str) -> Optional[ColorOption]:
+        return self.get_options_dict.get(value)
 
-
-class BootstrapColorChoices(TextChoices):
-    BLUE = "blue", "Blue"
-    GREEN = "green", "Green"
-    YELLOW = "yellow", "Yellow"
-    RED = "red", "Red"
-    PURPLE = "purple", "Purple"
-    INDIGO = "indigo", "Indigo"
-    PINK = "pink", "Pink"
-    ORANGE = "orange", "Orange"
-    TEAL = "teal", "Teal"
-    CYAN = "cyan", "Cyan"
-    GRAY = "gray", "Gray"
+    def get_or_raise(self, value: str) -> ColorOption:
+        try:
+            return self.get_options_dict[value]
+        except KeyError:
+            raise ValueError(_(f'No color option found with value "{value}"'))
 
     @property
-    def background_css(self):
-        background_classes = {
-            "blue": "bg-primary-200",
-            "green": "bg-success-200",
-            "yellow": "bg-warning-200",
-            "red": "bg-danger-200",
-            "purple": "bg-purple-200",
-            "indigo": "bg-indigo-200",
-            "pink": "bg-pink-200",
-            "orange": "bg-orange-200",
-            "teal": "bg-teal-200",
-            "cyan": "bg-cyan-200",
-            "gray": "bg-gray-200",
-        }
-        return background_classes.get(self.value, "")
+    def choices(self) -> List[Tuple[str, str]]:
+        return [color.instance_choices for color in self.get_options_dict.values()]
 
     @property
-    def text_css(self):
-        text_classes = {
-            "blue": "text-primary",
-            "green": "text-success",
-            "yellow": "text-warning",
-            "red": "text-danger",
-            "purple": "text-purple",
-            "indigo": "text-indigo",
-            "pink": "text-pink",
-            "orange": "text-orange",
-            "teal": "text-teal",
-            "cyan": "text-cyan",
-            "gray": "text-gray",
-        }
-        return text_classes.get(self.value, "")
+    def extended_choices(self) -> List[Tuple[str, str, str, str]]:
+        return [color.extended_choices for color in self.get_options_dict.values()]
+    
+    def __iter__(self):
+        return iter(self.get_options_dict.values())
 
-    @classmethod
-    def choices_list(cls):
-        options = [
-            (member.value, member.label, member.background_css, member.text_css)
-            for member in cls
-        ]
-        return options
+
+@dataclass(frozen=True, slots=True)
+class BootstrapColorChoices(ColorChoices):
+    BLUE: ColorOption = ColorOption('blue', 'Blue', 'bg-primary-200', 'text-primary')
+    GREEN: ColorOption = ColorOption('green', 'Green', 'bg-success-200', 'text-success')
+    YELLOW: ColorOption = ColorOption('yellow', 'Yellow', 'bg-warning-200', 'text-warning')
+    RED: ColorOption = ColorOption('red', 'Red', 'bg-danger-200', 'text-danger')
+    PURPLE: ColorOption = ColorOption('purple', 'Purple', 'bg-purple-200', 'text-purple')
+    INDIGO: ColorOption = ColorOption('indigo', 'Indigo', 'bg-indigo-200', 'text-indigo')
+    PINK: ColorOption = ColorOption('pink', 'Pink', 'bg-pink-200', 'text-pink')
+    ORANGE: ColorOption = ColorOption('orange', 'Orange', 'bg-orange-200', 'text-orange')
+    TEAL: ColorOption = ColorOption('teal', 'Teal', 'bg-teal-200', 'text-teal')
+    CYAN: ColorOption = ColorOption('cyan', 'Cyan', 'bg-cyan-200', 'text-cyan')
+    GRAY: ColorOption = ColorOption('gray', 'Gray', 'bg-gray-200', 'text-gray')
