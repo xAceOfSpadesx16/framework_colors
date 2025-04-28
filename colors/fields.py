@@ -32,34 +32,29 @@ class ColorModelField(CharField):
         self.color_type = color_type
         self.default_color_choices = default_color_choices
         self.only_use_custom_colors = only_use_custom_colors
+        if (
+            not self.choice_model
+            and not self.choice_queryset
+            and self.only_use_custom_colors
+        ):
+            raise Exception(
+                _("You must have a model or queryset to use custom colors.")
+            )
         self.model_name = None
         self.app_name = None
         kwargs.setdefault("max_length", 150)
 
         super().__init__(*args, **kwargs)
 
+    def get_config_dict(self) -> dict:
+        return color_settings.get_config().get(
+            self.app_name, color_settings.get_config().get(_("default"))
+        )
+
     def contribute_to_class(self, cls, name, private_only=False):
         self.model_name = cls.__name__
         self.app_name = cls._meta.app_label
-        if not self.color_type:
-            self.color_type = color_settings.get_config()[str(self.app_name)].get(
-                "color_type", color_settings.get_config()["default"].get("color_type")
-            )
-
-        self.color_type = FieldType[self.color_type]
-        if not self.default_color_choices:
-            default_color_choices = color_settings.get_config()[str(self.app_name)].get(
-                "choices", color_settings.get_config()["default"].get("choices")
-            )
-            self.default_color_choices = default_color_choices(
-                field_type=self.color_type
-            )
-        if not self.only_use_custom_colors:
-            if color_settings.get_config()[str(self.app_name)].get(
-                "only_use_custom_colors",
-                color_settings.get_config()["default"].get("only_use_custom_colors"),
-            ):
-                self.default_color_choices = ColorChoices()
+        self.field_config = color_settings.FieldConfig(cls, self, name)
         return super().contribute_to_class(cls, name, private_only)
 
     @property
@@ -80,6 +75,8 @@ class ColorModelField(CharField):
             kwargs["model"] = self.choice_model
         if self.choice_queryset:
             kwargs["queryset"] = self.choice_queryset
+        if self.only_use_custom_colors:
+            kwargs["only_use_custom_colors"] = self.only_use_custom_colors
         return name, path, args, kwargs
 
     def formfield(self, **kwargs):
@@ -91,7 +88,8 @@ class ColorModelField(CharField):
 
     def get_choices(self):
         """Returns a list of choices for the field."""
-        choices = list(self.default_color_choices.choices)  # default choices
+        default_color_choices = self.field_config.get("default_color_choices")
+        choices = list(default_color_choices().choices)  # default choices
 
         # empty list if no model or queryset is set
         query_model_options = []
@@ -99,15 +97,17 @@ class ColorModelField(CharField):
         # get model or queryset options just by name (no label required)
         if self.choice_queryset is not None:
             query_model_options = self.choice_queryset.values_list(
-                self.color_type.value, "name"
+                self.field_config.get("color_type").value, "name"
             )
-
         elif self.choice_model is not None:
             query_model_options = self.choice_model.objects.all().values_list(
-                self.color_type.value, "name"
+                self.field_config.get("color_type").value, "name"
             )
 
         # add model or queryset options to choices
-        choices.extend(query_model_options)
+        if not self.field_config.get("only_use_custom_colors"):
+            choices.extend(query_model_options)
+        if self.field_config.get("only_use_custom_colors"):
+            choices = query_model_options
 
         return choices
