@@ -5,7 +5,7 @@ requires = ["hatchling"]
 
 [project]
 name = "colors"
-version = "2025.04.17"
+version = "2025.04.28"
 description = "Framework color selections."
 readme = "README.md"
 requires-python = ">=3.12"
